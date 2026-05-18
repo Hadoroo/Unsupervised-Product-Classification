@@ -1,12 +1,11 @@
 import numpy as np
-
-
+from src.config import *
 # =========================================================
 # LOAD IMAGE EMBEDDINGS
 # =========================================================
 
 image_data = np.load(
-    "train_image_embeddings.npz",
+    IMAGE_TRAIN_OUTPUT,
     allow_pickle=True
 )
 
@@ -22,7 +21,7 @@ print(image_embeddings.shape)
 # =========================================================
 
 text_data = np.load(
-    "train_text_embeddings.npz",
+    TEXT_TRAIN_OUTPUT,
     allow_pickle=True
 )
 
@@ -92,7 +91,7 @@ print(fusion_embeddings.shape)
 # =========================================================
 
 np.savez(
-    "train_multimodal_embeddings.npz",
+    TRAIN_MULTIMODAL_OUTPUT,
 
     embeddings=fusion_embeddings.astype(np.float16),
 
@@ -105,4 +104,4 @@ np.savez(
     texts=texts
 )
 
-print("\nSaved: train_multimodal_embeddings.npz")
+print(f"\nSaved: {TRAIN_MULTIMODAL_OUTPUT}")

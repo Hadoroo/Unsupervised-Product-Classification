@@ -18,23 +18,7 @@ from sklearn.metrics import (
     f1_score
 )
 
-
-# =========================================================
-# CONFIG
-# =========================================================
-
-INPUT_FILE = "clustered_multimodal_embeddings.npz"
-
-MODEL_OUTPUT = "pseudo_label_classifier.pth"
-
-BATCH_SIZE = 64
-
-EPOCHS = 20
-
-LR = 1e-3
-
-RANDOM_STATE = 42
-
+from src.config import *
 
 # =========================================================
 # DEVICE
@@ -50,7 +34,7 @@ print(f"Using device: {device}")
 # =========================================================
 
 data = np.load(
-    INPUT_FILE,
+    MULTIMODAL_CLUSTER_OUTPUT,
     allow_pickle=True
 )
 

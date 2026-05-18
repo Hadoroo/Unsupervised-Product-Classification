@@ -11,26 +11,14 @@ from sklearn.metrics import (
     normalized_mutual_info_score
 )
 
-
-# =========================================================
-# CONFIG
-# =========================================================
-
-INPUT_FILE = "train_multimodal_embeddings.npz"
-
-OUTPUT_CSV = "clustering_result.csv"
-
-OUTPUT_NPZ = "clustered_multimodal_embeddings.npz"
-
-RANDOM_STATE = 42
-
+from src.config import *
 
 # =========================================================
 # LOAD DATA
 # =========================================================
 
 data = np.load(
-    INPUT_FILE,
+    TRAIN_MULTIMODAL_OUTPUT,
     allow_pickle=True
 )
 
@@ -175,11 +163,11 @@ df = pd.DataFrame({
 })
 
 df.to_csv(
-    OUTPUT_CSV,
+    CSV_OUTPUT,
     index=False
 )
 
-print(f"\nSaved CSV: {OUTPUT_CSV}")
+print(f"\nSaved CSV: {CSV_OUTPUT}")
 
 
 # =========================================================
@@ -188,7 +176,7 @@ print(f"\nSaved CSV: {OUTPUT_CSV}")
 
 np.savez(
 
-    OUTPUT_NPZ,
+    MULTIMODAL_CLUSTER_OUTPUT,
 
     embeddings=X,
 
@@ -203,7 +191,7 @@ np.savez(
     texts=texts
 )
 
-print(f"Saved NPZ: {OUTPUT_NPZ}")
+print(f"Saved NPZ: {MULTIMODAL_CLUSTER_OUTPUT}")
 
 
 # =========================================================

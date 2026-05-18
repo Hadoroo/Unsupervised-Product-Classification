@@ -1,3 +1,4 @@
+
 import os
 import torch
 import torch.nn as nn
@@ -6,21 +7,7 @@ import numpy as np
 from PIL import Image
 from torch.utils.data import Dataset, DataLoader
 from torchvision import models, transforms
-
-
-# =========================================================
-# CONFIG
-# =========================================================
-
-TRAIN_PATH = r"dataset/images/images/image_train"
-TEST_PATH  = r"dataset/images/images/image_test"
-
-TRAIN_OUTPUT = "dataset/features/image/train_embeddings.npz"
-TEST_OUTPUT  = "dataset/features/image/test_embeddings.npz"
-
-BATCH_SIZE = 64
-NUM_WORKERS = 4
-
+from src.config import *
 
 # =========================================================
 # DEVICE
@@ -189,14 +176,14 @@ if __name__ == "__main__":
 
     # TRAIN
     extract_embeddings(
-        dataset_path=TRAIN_PATH,
-        output_file=TRAIN_OUTPUT
+        dataset_path=IMAGE_TRAIN_PATH,
+        output_file=IMAGE_TRAIN_OUTPUT
     )
 
     # TEST
     extract_embeddings(
-        dataset_path=TEST_PATH,
-        output_file=TEST_OUTPUT
+        dataset_path=IMAGE_TEST_PATH,
+        output_file=IMAGE_TEST_OUTPUT
     )
 
     print("\nDone!")

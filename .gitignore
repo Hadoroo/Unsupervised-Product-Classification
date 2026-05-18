@@ -1,1 +1,3 @@
-Dataset
+dataset/*
+__pycache__
+outputs/*

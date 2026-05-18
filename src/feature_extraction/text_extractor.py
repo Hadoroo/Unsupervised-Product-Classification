@@ -4,23 +4,7 @@ import torch
 
 from sentence_transformers import SentenceTransformer
 from torch.utils.data import Dataset, DataLoader
-
-
-# =========================================================
-# CONFIG
-# =========================================================
-
-X_TRAIN_PATH = "C:/Personal/coding/S2/sem2/pm/Dataset/X_train_update.csv"
-Y_TRAIN_PATH = "C:/Personal/coding/S2/sem2/pm/Dataset/Y_train_CVw08PX.csv"
-X_TEST_PATH  = "C:/Personal/coding/S2/sem2/pm/Dataset/X_test_update.csv"
-
-TRAIN_OUTPUT = "C:/Personal/coding/S2/sem2/pm/Dataset/features/text/train_text_embeddings.npz"
-TEST_OUTPUT  = "C:/Personal/coding/S2/sem2/pm/Dataset/features/text/test_text_embeddings.npz"
-
-MODEL_NAME = "nvidia/llama-embed-nemotron-8b"
-
-BATCH_SIZE = 16
-
+from src.config import *
 
 # =========================================================
 # DEVICE
@@ -35,10 +19,10 @@ print(f"Using device: {device}")
 # LOAD DATA
 # =========================================================
 
-x_train = pd.read_csv(X_TRAIN_PATH)
-y_train = pd.read_csv(Y_TRAIN_PATH)
+x_train = pd.read_csv(X_TEXT_TRAIN_PATH)
+y_train = pd.read_csv(Y_TEXT_TRAIN_PATH)
 
-x_test = pd.read_csv(X_TEST_PATH)
+x_test = pd.read_csv(X_TEXT_TEST_PATH)
 
 
 # =========================================================
@@ -78,7 +62,7 @@ print(f"Test texts : {len(test_texts)}")
 # =========================================================
 
 model = SentenceTransformer(
-    MODEL_NAME,
+    TEXT_MODEL_NAME,
     trust_remote_code=True,
     device=device
 )
@@ -165,7 +149,7 @@ print(train_embeddings.shape)
 # =========================================================
 
 np.savez(
-    TRAIN_OUTPUT,
+    TEXT_TRAIN_OUTPUT,
 
     embeddings=train_embeddings,
 
@@ -178,7 +162,7 @@ np.savez(
     texts=np.array(train_texts)
 )
 
-print(f"\nSaved: {TRAIN_OUTPUT}")
+print(f"\nSaved: {TEXT_TRAIN_OUTPUT}")
 
 
 # =========================================================
@@ -199,7 +183,7 @@ print(test_embeddings.shape)
 # =========================================================
 
 np.savez(
-    TEST_OUTPUT,
+    TEXT_TEST_OUTPUT,
 
     embeddings=test_embeddings,
 
@@ -210,7 +194,7 @@ np.savez(
     texts=np.array(test_texts)
 )
 
-print(f"\nSaved: {TEST_OUTPUT}")
+print(f"\nSaved: {TEXT_TEST_OUTPUT}")
 
 
 print("\nDone!")

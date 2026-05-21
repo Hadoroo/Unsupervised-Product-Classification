@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import torch
-
+import gc
 from sentence_transformers import SentenceTransformer
 from torch.utils.data import Dataset, DataLoader
 from src.config import *
@@ -90,79 +90,117 @@ class TextDataset(Dataset):
 # EXTRACT FUNCTION
 # =========================================================
 
-def extract_embeddings(texts):
+def extract_embeddings(
+    texts,
+    batch_size=BATCH_SIZE,          # kecilkan untuk model 8B
+    dtype=np.float16,
+):
+    """
+    VRAM-optimized embedding extraction.
+    """
 
     dataset = TextDataset(texts)
 
     loader = DataLoader(
         dataset,
-        batch_size=BATCH_SIZE,
+        batch_size=batch_size,
         shuffle=False,
-        num_workers=0
+        num_workers=0,
+        pin_memory=False
     )
 
     all_embeddings = []
 
-    with torch.no_grad():
+    # inference_mode > no_grad
+    with torch.inference_mode():
 
         for batch_idx, batch_texts in enumerate(loader):
 
+            # =========================
+            # EMBEDDING
+            # =========================
+
             embeddings = model.encode(
                 batch_texts,
-                batch_size=len(batch_texts),
+                batch_size=batch_size,
+
+                # IMPORTANT
                 convert_to_numpy=True,
+                convert_to_tensor=False,
+
                 normalize_embeddings=True,
-                show_progress_bar=False
+                show_progress_bar=False,
             )
 
-            embeddings = embeddings.astype(np.float16)
+            # force compact dtype
+            embeddings = embeddings.astype(dtype, copy=False)
 
-            all_embeddings.append(embeddings)
+            # immediately move out from temporary refs
+            all_embeddings.append(embeddings.copy())
+
+            # =========================
+            # CLEANUP
+            # =========================
+
+            del embeddings
+
+            gc.collect()
+            torch.cuda.empty_cache()
 
             print(
                 f"Batch {batch_idx + 1}/{len(loader)} processed"
             )
 
-    all_embeddings = np.concatenate(
+    # =========================
+    # FINAL CONCAT
+    # =========================
+
+    result = np.concatenate(
         all_embeddings,
         axis=0
     )
 
-    return all_embeddings
+    # release temp lists
+    del all_embeddings
+
+    gc.collect()
+    torch.cuda.empty_cache()
+
+    return result
 
 
 # =========================================================
 # TRAIN EMBEDDINGS
 # =========================================================
 
-print("\nExtracting TRAIN embeddings...")
+# print("\nExtracting TRAIN embeddings...")
 
-train_embeddings = extract_embeddings(
-    train_texts
-)
+# train_embeddings = extract_embeddings(
+#     train_texts
+# )
 
-print(train_embeddings.shape)
+# print(train_embeddings.shape)
 
 
 # =========================================================
 # SAVE TRAIN
 # =========================================================
 
-np.savez(
-    TEXT_TRAIN_OUTPUT,
+# np.savez(
+#     TEXT_TRAIN_OUTPUT,
 
-    embeddings=train_embeddings,
+#     embeddings=train_embeddings,
 
-    labels=y_train["prdtypecode"].values,
+#     labels=y_train["prdtypecode"].values,
 
-    productid=x_train["productid"].values,
+#     productid=x_train["productid"].values,
 
-    imageid=x_train["imageid"].values,
+#     imageid=x_train["imageid"].values,
 
-    texts=np.array(train_texts)
-)
+#     texts=np.array(train_texts)
+# )
 
-print(f"\nSaved: {TEXT_TRAIN_OUTPUT}")
+# print(f"\nSaved: {TEXT_TRAIN_OUTPUT}")
 
 
 # =========================================================

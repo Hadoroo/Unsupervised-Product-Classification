@@ -12,10 +12,13 @@ TRAIN_MULTIMODAL_OUTPUT = "outputs/features/multimodal/train_multimodal_embeddin
 MULTIMODAL_CLUSTER_OUTPUT = "outputs/features/multimodal/clustered_multimodal_embeddings.npz"
 MODEL_OUTPUT = "outputs/model/pseudo_label_classifier.pth"
 CSV_OUTPUT = "outputs/csv/clustering_result.csv"
+PREDICTIONS_OUTPUT = "outputs/csv/pseudo_label_predictions.csv"
+MD_OUTPUT = "outputs/md/classification_report.md"
+PNG_OUTPUT = "outputs/png/confusion_matrix.png"
 EPOCHS = 20
 LR = 1e-3
 RANDOM_STATE = 42
-BATCH_SIZE = 16
+BATCH_SIZE = 8
 NUM_WORKERS = 4
 
 if __name__ == "__main__":
@@ -29,6 +32,9 @@ if __name__ == "__main__":
         MULTIMODAL_CLUSTER_OUTPUT,
         MODEL_OUTPUT,
         CSV_OUTPUT,
+        PREDICTIONS_OUTPUT,
+        MD_OUTPUT,
+        PNG_OUTPUT
     ]
 
     for path in OUTPUT_PATHS:

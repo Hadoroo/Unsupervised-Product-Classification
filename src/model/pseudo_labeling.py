@@ -1,6 +1,9 @@
 import numpy as np
 import torch
 import torch.nn as nn
+import matplotlib.pyplot as plt
+import pandas as pd
+import os
 
 from torch.utils.data import (
     Dataset,
@@ -174,62 +177,151 @@ model = PseudoLabelClassifier(
     num_classes
 ).to(device)
 
+model_exists = os.path.exists(MODEL_OUTPUT)
+
+if model_exists:
+
+    print("\nExisting model found.")
+
+    model.load_state_dict(
+        torch.load(
+            MODEL_OUTPUT,
+            map_location=device
+        )
+    )
+
+    print("Model loaded. Skipping training.")
+
+else:
+
+    print("\nNo existing model found.")
+    print("Training will start.")
+
 
 # =========================================================
 # LOSS & OPTIMIZER
 # =========================================================
+if not model_exists:
+    criterion = nn.CrossEntropyLoss()
 
-criterion = nn.CrossEntropyLoss()
-
-optimizer = torch.optim.Adam(
-    model.parameters(),
-    lr=LR
-)
+    optimizer = torch.optim.Adam(
+        model.parameters(),
+        lr=LR
+    )
 
 
-# =========================================================
-# TRAINING
-# =========================================================
+    # =========================================================
+    # TRAINING
+    # =========================================================
 
-best_acc = 0
+    best_acc = 0
 
-for epoch in range(EPOCHS):
+    for epoch in range(EPOCHS):
 
-    # =====================================================
-    # TRAIN
-    # =====================================================
+        # =====================================================
+        # TRAIN
+        # =====================================================
 
-    model.train()
+        model.train()
 
-    train_loss = 0
+        train_loss = 0
 
-    for X_batch, y_batch in train_loader:
+        for X_batch, y_batch in train_loader:
 
-        X_batch = X_batch.to(device)
+            X_batch = X_batch.to(device)
 
-        y_batch = y_batch.to(device)
+            y_batch = y_batch.to(device)
 
-        optimizer.zero_grad()
+            optimizer.zero_grad()
 
-        outputs = model(X_batch)
+            outputs = model(X_batch)
 
-        loss = criterion(
-            outputs,
-            y_batch
+            loss = criterion(
+                outputs,
+                y_batch
+            )
+
+            loss.backward()
+
+            optimizer.step()
+
+            train_loss += loss.item()
+
+        train_loss /= len(train_loader)
+
+
+        # =====================================================
+        # VALIDATION
+        # =====================================================
+
+        model.eval()
+
+        preds = []
+
+        targets = []
+
+        with torch.no_grad():
+
+            for X_batch, y_batch in valid_loader:
+
+                X_batch = X_batch.to(device)
+
+                y_batch = y_batch.to(device)
+
+                outputs = model(X_batch)
+
+                pred = outputs.argmax(dim=1)
+
+                preds.extend(
+                    pred.cpu().numpy()
+                )
+
+                targets.extend(
+                    y_batch.cpu().numpy()
+                )
+
+        acc = accuracy_score(
+            targets,
+            preds
         )
 
-        loss.backward()
+        f1 = f1_score(
+            targets,
+            preds,
+            average="weighted"
+        )
 
-        optimizer.step()
+        print(
+            f"Epoch {epoch+1}/{EPOCHS} | "
+            f"Loss: {train_loss:.4f} | "
+            f"Acc: {acc:.4f} | "
+            f"F1: {f1:.4f}"
+        )
 
-        train_loss += loss.item()
 
-    train_loss /= len(train_loader)
+        # =====================================================
+        # SAVE BEST MODEL
+        # =====================================================
+
+        if acc > best_acc:
+
+            best_acc = acc
+
+            torch.save(
+                model.state_dict(),
+                MODEL_OUTPUT
+            )
+
+            print(
+                f"Best model saved "
+                f"(Acc={best_acc:.4f})"
+            )
 
 
-    # =====================================================
-    # VALIDATION
-    # =====================================================
+# =========================================================
+# FINAL EVALUATION
+# =========================================================
+def evaluate_model():
 
     model.eval()
 
@@ -237,7 +329,7 @@ for epoch in range(EPOCHS):
 
     targets = []
 
-    with torch.no_grad():
+    with torch.inference_mode():
 
         for X_batch, y_batch in valid_loader:
 
@@ -257,58 +349,40 @@ for epoch in range(EPOCHS):
                 y_batch.cpu().numpy()
             )
 
-    acc = accuracy_score(
-        targets,
-        preds
-    )
+    return targets, preds
 
-    f1 = f1_score(
-        targets,
-        preds,
-        average="weighted"
-    )
-
-    print(
-        f"Epoch {epoch+1}/{EPOCHS} | "
-        f"Loss: {train_loss:.4f} | "
-        f"Acc: {acc:.4f} | "
-        f"F1: {f1:.4f}"
-    )
-
-
-    # =====================================================
-    # SAVE BEST MODEL
-    # =====================================================
-
-    if acc > best_acc:
-
-        best_acc = acc
-
-        torch.save(
-            model.state_dict(),
-            MODEL_OUTPUT
-        )
-
-        print(
-            f"Best model saved "
-            f"(Acc={best_acc:.4f})"
-        )
-
-
-# =========================================================
-# FINAL EVALUATION
-# =========================================================
+targets, preds = evaluate_model()
 
 print("\n==============================")
 print("FINAL EVALUATION")
 print("==============================")
 
-print(
-    classification_report(
-        targets,
-        preds
-    )
+report_text = classification_report(
+    targets,
+    preds
 )
+
+print(report_text)
+
+report_dict = classification_report(
+    targets,
+    preds,
+    output_dict=True
+)
+
+report_df = pd.DataFrame(
+    report_dict
+).transpose()
+
+markdown_report = report_df.to_markdown()
+
+with open(MD_OUTPUT, "w", encoding="utf-8") as f:
+
+    f.write("# Classification Report\n\n")
+
+    f.write(markdown_report)
+
+print(f"\nMarkdown report saved: {MD_OUTPUT}")
 
 cm = confusion_matrix(
     targets,
@@ -318,6 +392,73 @@ cm = confusion_matrix(
 print("\nConfusion Matrix:")
 
 print(cm)
+
+# ==========================================
+# PLOT CONFUSION MATRIX
+# ==========================================
+
+fig, ax = plt.subplots(figsize=(10, 8))
+
+im = ax.imshow(cm)
+
+# ==========================================
+# LABELS
+# ==========================================
+
+classes = np.unique(targets)
+
+ax.set_xticks(np.arange(len(classes)))
+
+ax.set_yticks(np.arange(len(classes)))
+
+ax.set_xticklabels(classes)
+
+ax.set_yticklabels(classes)
+
+ax.set_xlabel("Predicted Label")
+
+ax.set_ylabel("True Label")
+
+ax.set_title("Confusion Matrix")
+
+# ==========================================
+# WRITE VALUES INSIDE CELLS
+# ==========================================
+
+threshold = cm.max() / 2
+
+for i in range(cm.shape[0]):
+
+    for j in range(cm.shape[1]):
+
+        value = cm[i, j]
+
+        ax.text(
+            j,
+            i,
+            str(value),
+            ha="center",
+            va="center",
+            color="black" if value > threshold else "white"
+        )
+
+# ==========================================
+# COLORBAR
+# ==========================================
+
+fig.colorbar(im)
+
+plt.tight_layout()
+
+plt.savefig(
+    PNG_OUTPUT,
+    dpi=300,
+    bbox_inches="tight"
+)
+
+plt.close()
+
+print(f"\nConfusion matrix saved: {PNG_OUTPUT}")
 
 
 # =========================================================
@@ -331,14 +472,12 @@ prediction_df = {
     "pred_label": preds
 }
 
-import pandas as pd
-
 prediction_df = pd.DataFrame(
     prediction_df
 )
 
 prediction_df.to_csv(
-    "pseudo_label_predictions.csv",
+    PREDICTIONS_OUTPUT,
     index=False
 )
 

@@ -23,6 +23,8 @@ LR = 1e-3
 RANDOM_STATE = 42
 BATCH_SIZE = 8
 NUM_WORKERS = 4
+TEXT_DIM = 4096
+IMAGE_DIM = 2048
 
 if __name__ == "__main__":
     import os

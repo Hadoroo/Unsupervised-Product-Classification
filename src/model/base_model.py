@@ -138,7 +138,8 @@ class ClusteringModel(MLModel, ABC):
         X: np.ndarray,
         true_labels: np.ndarray,
         pseudo_labels: np.ndarray,
-        mapped_labels: np.ndarray
+        mapped_labels: np.ndarray,
+        save_path: str | Path | None = None
     ) -> dict[str, float]:
 
         metrics = {}
@@ -177,6 +178,52 @@ class ClusteringModel(MLModel, ABC):
                 mapped_labels
             )
         )
+
+        # =================================
+        # SAVE MARKDOWN
+        # =================================
+
+        if save_path is not None:
+
+            save_path = Path(save_path)
+
+            save_path.parent.mkdir(
+                parents=True,
+                exist_ok=True
+            )
+
+            md = f"""
+            # Clustering Evaluation Report
+
+            ## Metrics
+
+            | Metric | Score |
+            |---|---:|
+            | Silhouette Score | {metrics["silhouette_score"]:.6f} |
+            | Davies-Bouldin Score | {metrics["davies_bouldin_score"]:.6f} |
+            | Calinski-Harabasz Score | {metrics["calinski_harabasz_score"]:.6f} |
+            | Adjusted Rand Index (ARI) | {metrics["ari_score"]:.6f} |
+            | Normalized Mutual Information (NMI) | {metrics["nmi_score"]:.6f} |
+            | Cohen Kappa Score | {metrics["kappa_score"]:.6f} |
+
+            ---
+
+            ## Dataset Information
+
+            | Property | Value |
+            |---|---:|
+            | Total Samples | {len(X)} |
+            | Embedding Dimension | {X.shape[1]} |
+            | Number of Clusters | {len(np.unique(pseudo_labels))} |
+            """
+
+            with open(
+                save_path,
+                "w",
+                encoding="utf-8"
+            ) as f:
+
+                f.write(md)
 
         return metrics
 

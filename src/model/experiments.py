@@ -109,7 +109,7 @@ for model_name, clustering_model in MODELS.items():
     mapped_labels, cluster_map = clustering_model.map_clusters(true_labels, pseudo_labels)
 
     print(f"Evaluating clusters for model {model_name}")
-    metrics = clustering_model.evaluate_clustering(X, true_labels, pseudo_labels, mapped_labels)
+    metrics = clustering_model.evaluate_clustering(X, true_labels, pseudo_labels, mapped_labels, result_folder / "cluster_metric_result.md")
 
     print("\n========== METRICS ==========")
 

@@ -10,6 +10,7 @@ from src.config import *
 from src.model.base_model import ClusteringModel
 from src.model.kmeans import KMeansClustering
 from src.model.mmdc import AutoencoderMultimodalClustering
+from src.model.umcc import UMCClusteringModel
 
 print("Loading data...")
 data = np.load(
@@ -28,18 +29,19 @@ imageids = data["imageid"]
 texts = data["texts"]
 
 print("Preprocessing data...")
-X = ClusteringModel.preprocess_embeddings(X)
+X = ClusteringModel.preprocess(X)
 
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-run_path = (
-    Path.cwd()
-    / "outputs"
-    / f"run_{timestamp}"
-)
+run_path = "outputs/run_20260529_161646"
 
-print(f"Creating folder for outputs in {run_path}...")
-run_path.mkdir(parents=True, exist_ok=True)
+run_path = Path(run_path)
+if run_path is None:
+    run_path = (Path.cwd() / "outputs" / f"run_{timestamp}")
+    print(f"Creating folder for outputs in {run_path}...")
+    run_path.mkdir(parents=True, exist_ok=True)
+else:
+    print(f"Using existing outputs folder in {run_path}...")
 
 models_root = run_path / "models"
 
@@ -64,7 +66,12 @@ MODELS: dict[str, ClusteringModel] = {
         input_dim_1=TEXT_DIM,
         input_dim_2=IMAGE_DIM,
         n_clusters=num_clusters
-    )
+    ),
+    
+    "umcc": UMCClusteringModel(
+        n_clusters=num_clusters
+    ),
+
 }
 
 # =========================================================
@@ -109,7 +116,7 @@ for model_name, clustering_model in MODELS.items():
     mapped_labels, cluster_map = clustering_model.map_clusters(true_labels, pseudo_labels)
 
     print(f"Evaluating clusters for model {model_name}")
-    metrics = clustering_model.evaluate_clustering(X, true_labels, pseudo_labels, mapped_labels, result_folder / "cluster_metric_result.md")
+    metrics = clustering_model.evaluate(X, true_labels, pseudo_labels, mapped_labels)
 
     print("\n========== METRICS ==========")
 

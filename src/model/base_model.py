@@ -99,7 +99,7 @@ class ClusteringModel(MLModel, ABC):
         pass
 
     @staticmethod
-    def preprocess_embeddings(X: np.ndarray) -> np.ndarray:
+    def preprocess(X: np.ndarray) -> np.ndarray:
 
         X = np.nan_to_num(X)
 
@@ -134,12 +134,11 @@ class ClusteringModel(MLModel, ABC):
         )
 
     @staticmethod
-    def evaluate_clustering(
+    def evaluate(
         X: np.ndarray,
         true_labels: np.ndarray,
         pseudo_labels: np.ndarray,
-        mapped_labels: np.ndarray,
-        save_path: str | Path | None = None
+        mapped_labels: np.ndarray
     ) -> dict[str, float]:
 
         metrics = {}
@@ -154,9 +153,7 @@ class ClusteringModel(MLModel, ABC):
 
         try:
             metrics["calinski_harabasz_score"] = calinski_harabasz_score(X, pseudo_labels)
-
         except Exception:
-
             metrics["calinski_harabasz_score"] = np.nan
 
         # ---------------------------------
@@ -165,66 +162,10 @@ class ClusteringModel(MLModel, ABC):
 
         metrics["ari_score"] = (adjusted_rand_score(true_labels, pseudo_labels))
 
-        metrics["nmi_score"] = (
-            normalized_mutual_info_score(
-                true_labels,
-                pseudo_labels
-            )
-        )
+        metrics["nmi_score"] = normalized_mutual_info_score(true_labels, pseudo_labels)
 
-        metrics["kappa_score"] = (
-            cohen_kappa_score(
-                true_labels,
-                mapped_labels
-            )
-        )
-
-        # =================================
-        # SAVE MARKDOWN
-        # =================================
-
-        if save_path is not None:
-
-            save_path = Path(save_path)
-
-            save_path.parent.mkdir(
-                parents=True,
-                exist_ok=True
-            )
-
-            md = f"""
-            # Clustering Evaluation Report
-
-            ## Metrics
-
-            | Metric | Score |
-            |---|---:|
-            | Silhouette Score | {metrics["silhouette_score"]:.6f} |
-            | Davies-Bouldin Score | {metrics["davies_bouldin_score"]:.6f} |
-            | Calinski-Harabasz Score | {metrics["calinski_harabasz_score"]:.6f} |
-            | Adjusted Rand Index (ARI) | {metrics["ari_score"]:.6f} |
-            | Normalized Mutual Information (NMI) | {metrics["nmi_score"]:.6f} |
-            | Cohen Kappa Score | {metrics["kappa_score"]:.6f} |
-
-            ---
-
-            ## Dataset Information
-
-            | Property | Value |
-            |---|---:|
-            | Total Samples | {len(X)} |
-            | Embedding Dimension | {X.shape[1]} |
-            | Number of Clusters | {len(np.unique(pseudo_labels))} |
-            """
-
-            with open(
-                save_path,
-                "w",
-                encoding="utf-8"
-            ) as f:
-
-                f.write(md)
-
+        metrics["kappa_score"] = cohen_kappa_score(true_labels, mapped_labels)
+        
         return metrics
 
     @staticmethod
@@ -248,25 +189,16 @@ class ClusteringModel(MLModel, ABC):
             alpha=0.7
         )
 
-        plt.title(
-            "Cluster Visualization"
-        )
+        plt.title("Cluster Visualization")
 
-        plt.xlabel(
-            "PCA Component 1"
-        )
+        plt.xlabel("PCA Component 1")
 
-        plt.ylabel(
-            "PCA Component 2"
-        )
+        plt.ylabel("PCA Component 2")
 
         plt.colorbar(scatter)
 
         plt.tight_layout()
 
-        plt.savefig(
-            output_path,
-            dpi=300
-        )
+        plt.savefig(output_path, dpi=300)
 
         plt.close()

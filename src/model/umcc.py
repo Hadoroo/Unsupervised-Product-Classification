@@ -275,13 +275,13 @@ class UMCClusteringModel(ClusteringModel):
         self.n_candidates = n_candidates
 
         # Komponen internal
-        self.kmeans_ = KMeans(
+        self.kmeans_:KMeans = KMeans(
             n_clusters=n_clusters,
             init="k-means++",   # K-Means++ seperti di paper (Section 4.3)
             n_init=10,
             random_state=random_state,
         )
-        self.selector_ = DensityBasedSampleSelector(
+        self.selector_:DensityBasedSampleSelector = DensityBasedSampleSelector(
             L=L, delta_prime=delta_prime, n_candidates=n_candidates
         )
 

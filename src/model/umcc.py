@@ -33,6 +33,8 @@ from sklearn.cluster import KMeans
 from scipy.stats import mode
 
 from src.model.base_model import ClusteringModel
+from sklearn.neighbors import NearestNeighbors
+from sklearn.metrics import pairwise_distances
 
 
 # =============================================================================
@@ -88,48 +90,58 @@ class DensityBasedSampleSelector:
                 unique.append(k)
         return unique
 
-    # ------------------------------------------------------------------
-    # Eq. 5: Hitung densitas tiap sampel dalam cluster
-    # ρ_i = K_near / Σ_{j=1}^{K_near} d_ij
-    # ------------------------------------------------------------------
     def _compute_density(
-        self, X_cluster: np.ndarray, k_near: int
+        self,
+        X_cluster: np.ndarray,
+        k_near: int
     ) -> np.ndarray:
-        n = len(X_cluster)
-        densities = np.zeros(n)
 
-        # Hitung pairwise Euclidean distance
-        diff = X_cluster[:, np.newaxis, :] - X_cluster[np.newaxis, :, :]  # (n, n, d)
-        dist_matrix = np.sqrt((diff ** 2).sum(axis=-1))                   # (n, n)
+        # cari k+1 karena tetangga pertama = dirinya sendiri
+        nn = NearestNeighbors(
+            n_neighbors=k_near + 1,
+            metric="euclidean",
+            algorithm="auto"
+        )
 
-        for i in range(n):
-            dists = dist_matrix[i].copy()
-            dists[i] = np.inf                      # abaikan jarak ke diri sendiri
-            sorted_dists = np.sort(dists)[:k_near] # k_near tetangga terdekat
-            sum_dists = sorted_dists.sum()
-            densities[i] = k_near / sum_dists if sum_dists > 0 else 0.0
+        nn.fit(X_cluster)
+
+        distances, _ = nn.kneighbors(X_cluster)
+
+        # buang kolom pertama (distance ke diri sendiri = 0)
+        distances = distances[:, 1:]
+
+        # Eq. 5
+        sum_distances = distances.sum(axis=1)
+
+        densities = np.where(
+            sum_distances > 0,
+            k_near / sum_distances,
+            0.0
+        )
 
         return densities
 
-    # ------------------------------------------------------------------
-    # Eq. 8-9: Hitung cohesion score untuk subset terpilih
-    # coh(C^q_k,i) = 1/(m-1) * Σ_{j≠i} d(x_i, x_j)
-    # ------------------------------------------------------------------
-    def _compute_cohesion(self, X_selected: np.ndarray) -> float:
+    def _compute_cohesion(
+        self,
+        X_selected: np.ndarray
+    ) -> float:
+
         m = len(X_selected)
+
         if m <= 1:
             return 0.0
 
-        diff = X_selected[:, np.newaxis, :] - X_selected[np.newaxis, :, :]
-        dist_matrix = np.sqrt((diff ** 2).sum(axis=-1))
+        dist_matrix = pairwise_distances(
+            X_selected,
+            metric="euclidean"
+        )
 
-        # Rata-rata jarak antar pasangan (tanpa diagonal)
-        cohesion_per_sample = []
-        for i in range(m):
-            dists_i = [dist_matrix[i, j] for j in range(m) if j != i]
-            cohesion_per_sample.append(np.mean(dists_i))
+        # buang diagonal
+        np.fill_diagonal(dist_matrix, np.nan)
 
-        return float(np.mean(cohesion_per_sample))
+        cohesion = np.nanmean(dist_matrix)
+
+        return float(cohesion)
 
     # ------------------------------------------------------------------
     # Eq. 10: Pilih q_opt = argmax cohesion(C^q_k)

@@ -28,6 +28,7 @@ from typing import Any
 import numpy as np
 
 import torch
+import joblib
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
@@ -142,8 +143,8 @@ class AutoencoderMultimodalClustering(ClusteringModel):
         L_cluster      : clustering loss (jarak ke centroid K-Means)
     """
 
-    WEIGHTS_NAME = "ae_multimodal.pt"
-
+    WEIGHTS_NAME = "weights"
+    
     def __init__(
         self,
         input_dim_1: int,
@@ -483,8 +484,17 @@ class AutoencoderMultimodalClustering(ClusteringModel):
     # Save / Load
     # ---------------------------------------------------------
 
-    def save_weights(self, path: str | Path) -> None:
-        state = {
+    def save_weights(self, folder: str | Path) -> None:
+
+        folder = Path(folder)
+
+        folder.mkdir(parents=True, exist_ok=True)
+
+        # ---------------------------------
+        # Torch state
+        # ---------------------------------
+
+        torch_state = {
             "encoder_1": self.encoder_1.state_dict(),
             "decoder_1": self.decoder_1.state_dict(),
             "encoder_2": self.encoder_2.state_dict(),
@@ -492,22 +502,40 @@ class AutoencoderMultimodalClustering(ClusteringModel):
             "cross_decoder_1to2": self.cross_decoder_1to2.state_dict(),
             "cross_decoder_2to1": self.cross_decoder_2to1.state_dict(),
             "fusion": self.fusion.state_dict(),
-            "kmeans": self.kmeans,
-            "cluster_centers_": self.cluster_centers_,
+            "cluster_centers_": torch.tensor(self.cluster_centers_, dtype=torch.float32)
         }
-        torch.save(state, path)
 
-    def load_weights(self, path: str | Path) -> None:
-        state = torch.load(path, map_location=self.device)
+        torch.save(torch_state, folder / "model.pt")
+
+        # ---------------------------------
+        # sklearn object
+        # ---------------------------------
+
+        joblib.dump(self.kmeans, folder / "kmeans.pkl")
+
+    def load_weights(self, folder: str | Path) -> None:
+
+        folder = Path(folder)
+
+        state = torch.load(folder / "model.pt", map_location=self.device)
+
         self.encoder_1.load_state_dict(state["encoder_1"])
+
         self.decoder_1.load_state_dict(state["decoder_1"])
+
         self.encoder_2.load_state_dict(state["encoder_2"])
+
         self.decoder_2.load_state_dict(state["decoder_2"])
+
         self.cross_decoder_1to2.load_state_dict(state["cross_decoder_1to2"])
+
         self.cross_decoder_2to1.load_state_dict(state["cross_decoder_2to1"])
+
         self.fusion.load_state_dict(state["fusion"])
-        self.kmeans = state["kmeans"]
-        self.cluster_centers_ = state["cluster_centers_"]
+
+        self.cluster_centers_ = state["cluster_centers_"].cpu().numpy()
+
+        self.kmeans = joblib.load(folder / "kmeans.pkl")
 
     # ---------------------------------------------------------
     # Config (parse / export)

@@ -90,6 +90,8 @@ for model_name, clustering_model in MODELS.items():
 
     result_folder = results_root / model_name
 
+    model_folder.mkdir(parents=True, exist_ok=True)
+
     result_folder.mkdir(parents=True, exist_ok=True)
 
     # -----------------------------------------------------

@@ -9,7 +9,7 @@ import pandas as pd
 from src.config import *
 from src.model.base_model import ClusteringModel
 from src.model.kmeans import KMeansClustering
-from src.model.mmdc import AutoencoderMultimodalClustering
+from src.model.mmdcdl import AutoencoderMultimodalClustering
 from src.model.umcc import UMCClusteringModel
 
 print("Loading data...")

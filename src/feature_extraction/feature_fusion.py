@@ -32,7 +32,8 @@ imageids   = text_data["imageid"]
 
 labels = text_data["labels"]
 
-texts = text_data["texts"]
+designation = text_data["designation"]
+description = text_data["description"]
 
 print("\nText embeddings:")
 print(text_embeddings.shape)
@@ -101,7 +102,10 @@ np.savez(
 
     imageid=imageids,
 
-    texts=texts
+    designation=designation,
+
+    description=description,
+
 )
 
 print(f"\nSaved: {TRAIN_MULTIMODAL_OUTPUT}")

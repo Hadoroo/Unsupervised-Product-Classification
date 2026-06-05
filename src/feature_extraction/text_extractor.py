@@ -25,35 +25,39 @@ x_test = pd.read_csv(X_TEXT_TEST_PATH)
 
 
 # =========================================================
-# COMBINE TEXT
+# PREPARE TEXT FIELDS
 # =========================================================
 
-def combine_text(df):
+train_designations = (
+    x_train["designation"]
+    .fillna("")
+    .astype(str)
+    .tolist()
+)
 
-    designation = (
-        df["designation"]
-        .fillna("")
-        .astype(str)
-    )
+train_descriptions = (
+    x_train["description"]
+    .fillna("")
+    .astype(str)
+    .tolist()
+)
 
-    description = (
-        df["description"]
-        .fillna("")
-        .astype(str)
-    )
+test_designations = (
+    x_test["designation"]
+    .fillna("")
+    .astype(str)
+    .tolist()
+)
 
-    texts = (
-        designation + " " + description
-    )
+test_descriptions = (
+    x_test["description"]
+    .fillna("")
+    .astype(str)
+    .tolist()
+)
 
-    return texts.tolist()
-
-
-train_texts = combine_text(x_train)
-test_texts  = combine_text(x_test)
-
-print(f"Train texts: {len(train_texts)}")
-print(f"Test texts : {len(test_texts)}")
+print(f"Train samples: {len(train_designations)}")
+print(f"Test samples : {len(test_designations)}")
 
 
 # =========================================================
@@ -75,14 +79,18 @@ print("Model loaded")
 
 class TextDataset(Dataset):
 
-    def __init__(self, texts):
-        self.texts = texts
+    def __init__(self, designations, descriptions):
+        self.designations = designations
+        self.descriptions = descriptions
 
     def __len__(self):
-        return len(self.texts)
+        return len(self.designations)
 
     def __getitem__(self, idx):
-        return self.texts[idx]
+        return (
+            self.designations[idx],
+            self.descriptions[idx]
+        )
 
 
 # =========================================================
@@ -90,15 +98,22 @@ class TextDataset(Dataset):
 # =========================================================
 
 def extract_embeddings(
-    texts,
-    batch_size=BATCH_SIZE,          # kecilkan untuk model 8B
+    designations,
+    descriptions,
+    batch_size=BATCH_SIZE,
+    target_dim=2048,
     dtype=np.float16,
 ):
     """
-    VRAM-optimized embedding extraction.
+    Encode designation and description separately,
+    truncate using MRL,
+    then concatenate.
     """
 
-    dataset = TextDataset(texts)
+    dataset = TextDataset(
+        designations,
+        descriptions
+    )
 
     loader = DataLoader(
         dataset,
@@ -110,60 +125,89 @@ def extract_embeddings(
 
     all_embeddings = []
 
-    # inference_mode > no_grad
     with torch.inference_mode():
 
-        for batch_idx, batch_texts in enumerate(loader):
+        for batch_idx, (batch_designation, batch_description) in enumerate(loader):
 
-            # =========================
-            # EMBEDDING
-            # =========================
+            # ----------------------------------
+            # designation embedding
+            # ----------------------------------
 
-            embeddings = model.encode(
-                batch_texts,
+            designation_emb = model.encode(
+                batch_designation,
                 batch_size=batch_size,
-
-                # IMPORTANT
                 convert_to_numpy=True,
                 convert_to_tensor=False,
-
                 normalize_embeddings=True,
                 show_progress_bar=False,
             )
 
-            # force compact dtype
-            embeddings = embeddings.astype(dtype, copy=False)
+            # MRL truncation
+            designation_emb = designation_emb[:, :target_dim]
 
-            # immediately move out from temporary refs
-            all_embeddings.append(embeddings.copy())
+            # ----------------------------------
+            # description embedding
+            # ----------------------------------
 
-            # =========================
-            # CLEANUP
-            # =========================
+            description_emb = model.encode(
+                batch_description,
+                batch_size=batch_size,
+                convert_to_numpy=True,
+                convert_to_tensor=False,
+                normalize_embeddings=True,
+                show_progress_bar=False,
+            )
 
-            del embeddings
+            # MRL truncation
+            description_emb = description_emb[:, :target_dim]
+
+            # ----------------------------------
+            # concat
+            # ----------------------------------
+
+            embeddings = np.concatenate(
+                [
+                    designation_emb,
+                    description_emb
+                ],
+                axis=1
+            )
+
+            embeddings = embeddings.astype(
+                dtype,
+                copy=False
+            )
+
+            all_embeddings.append(
+                embeddings.copy()
+            )
+
+            del (
+                designation_emb,
+                description_emb,
+                embeddings
+            )
 
             gc.collect()
-            torch.cuda.empty_cache()
+
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
 
             print(
                 f"Batch {batch_idx + 1}/{len(loader)} processed"
             )
-
-    # =========================
-    # FINAL CONCAT
-    # =========================
 
     result = np.concatenate(
         all_embeddings,
         axis=0
     )
 
-    # release temp lists
     del all_embeddings
 
     gc.collect()
-    torch.cuda.empty_cache()
+
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
     return result
 
@@ -172,34 +216,38 @@ def extract_embeddings(
 # TRAIN EMBEDDINGS
 # =========================================================
 
-# print("\nExtracting TRAIN embeddings...")
+print("\nExtracting TRAIN embeddings...")
 
-# train_embeddings = extract_embeddings(
-#     train_texts
-# )
+train_embeddings = extract_embeddings(
+    train_designations,
+    train_descriptions,
+    target_dim=2048
+)
 
-# print(train_embeddings.shape)
+print(train_embeddings.shape)
 
 
 # =========================================================
 # SAVE TRAIN
 # =========================================================
 
-# np.savez(
-#     TEXT_TRAIN_OUTPUT,
+np.savez(
+    TEXT_TRAIN_OUTPUT,
 
-#     embeddings=train_embeddings,
+    embeddings=train_embeddings,
 
-#     labels=y_train["prdtypecode"].values,
+    labels=y_train["prdtypecode"].values,
 
-#     productid=x_train["productid"].values,
+    productid=x_train["productid"].values,
 
-#     imageid=x_train["imageid"].values,
+    imageid=x_train["imageid"].values,
 
-#     texts=np.array(train_texts)
-# )
+    designation=np.array(train_designations),
 
-# print(f"\nSaved: {TEXT_TRAIN_OUTPUT}")
+    description=np.array(train_descriptions),
+)
+
+print(f"\nSaved: {TEXT_TRAIN_OUTPUT}")
 
 
 # =========================================================
@@ -209,7 +257,9 @@ def extract_embeddings(
 print("\nExtracting TEST embeddings...")
 
 test_embeddings = extract_embeddings(
-    test_texts
+    test_designations,
+    test_descriptions,
+    target_dim=2048
 )
 
 print(test_embeddings.shape)
@@ -228,7 +278,9 @@ np.savez(
 
     imageid=x_test["imageid"].values,
 
-    texts=np.array(test_texts)
+    designation=np.array(train_designations),
+
+    description=np.array(train_descriptions),
 )
 
 print(f"\nSaved: {TEXT_TEST_OUTPUT}")

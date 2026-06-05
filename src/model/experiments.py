@@ -26,7 +26,8 @@ productids = data["productid"]
 
 imageids = data["imageid"]
 
-texts = data["texts"]
+designation = data["designation"]
+description = data["description"]
 
 print("Preprocessing data...")
 X = ClusteringModel.preprocess(X)
@@ -35,12 +36,12 @@ timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
 run_path = "outputs/run_20260529_161646"
 
-run_path = Path(run_path)
 if run_path is None:
-    run_path = (Path.cwd() / "outputs" / f"run_{timestamp}")
+    run_path = Path(Path.cwd() / "outputs" / f"run_{timestamp}")
     print(f"Creating folder for outputs in {run_path}...")
     run_path.mkdir(parents=True, exist_ok=True)
 else:
+    run_path = Path(run_path)
     print(f"Using existing outputs folder in {run_path}...")
 
 models_root = run_path / "models"
@@ -130,7 +131,8 @@ for model_name, clustering_model in MODELS.items():
     df = pd.DataFrame({
         "productid": productids,
         "imageid": imageids,
-        "text": texts,
+        "designation": designation,
+        "description": description,
         "true_label": true_labels,
         "pseudo_label": pseudo_labels,
         "mapped_label": mapped_labels

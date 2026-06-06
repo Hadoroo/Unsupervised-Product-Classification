@@ -1,4 +1,4 @@
-.PHONY: text image multimodal check
+.PHONY: text image multimodal check exp
 
 text:
 	python -m src.feature_extraction.text_extractor
@@ -8,6 +8,9 @@ image:
 
 multimodal:
 	python -m src.feature_extraction.feature_fusion
+
+exp:
+	python -m src.model.experiments
 
 check:
 	tmux attach -t cluster

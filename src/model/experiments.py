@@ -34,7 +34,7 @@ X = ClusteringModel.preprocess(X)
 
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-run_path = "outputs/run_20260529_161646"
+run_path = None
 
 if run_path is None:
     run_path = Path(Path.cwd() / "outputs" / f"run_{timestamp}")
@@ -90,8 +90,6 @@ for model_name, clustering_model in MODELS.items():
     model_folder = models_root / model_name
 
     result_folder = results_root / model_name
-
-    model_folder.mkdir(parents=True, exist_ok=True)
 
     result_folder.mkdir(parents=True, exist_ok=True)
 

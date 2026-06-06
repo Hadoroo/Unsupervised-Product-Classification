@@ -77,8 +77,8 @@ text_embeddings = l2_normalize(
 
 fusion_embeddings = np.concatenate(
     [
+        text_embeddings,
         image_embeddings,
-        text_embeddings
     ],
     axis=1
 )

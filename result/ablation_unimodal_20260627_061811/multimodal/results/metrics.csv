@@ -1,0 +1,7 @@
+metric,value
+silhouette_score,0.022586989705354808
+davies_bouldin_score,4.753906659796837
+calinski_harabasz_score,711.4476137447242
+ari_score,0.08639518937382991
+nmi_score,0.15683647330811995
+kappa_score,0.1519647177194322

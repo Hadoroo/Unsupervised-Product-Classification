@@ -9,6 +9,7 @@ TEXT_TRAIN_OUTPUT = "outputs/features/text/train_text_embeddings.npz"
 TEXT_TEST_OUTPUT  = "outputs/features/text/test_text_embeddings.npz"
 TEXT_MODEL_NAME = "Qwen/Qwen3-Embedding-8B"
 TRAIN_MULTIMODAL_OUTPUT = "outputs/features/multimodal/train_multimodal_embeddings.npz"
+UNIMODAL_MULTIMODAL_OUTPUT = "outputs/features/multimodal/unimodal_multimodal_embeddings.npz"
 MULTIMODAL_CLUSTER_OUTPUT = "outputs/features/multimodal/clustered_multimodal_embeddings.npz"
 MODEL_OUTPUT = "outputs/model/pseudo_label_classifier.pth"
 CSV_OUTPUT = "outputs/csv/clustering_result.csv"
@@ -25,6 +26,9 @@ BATCH_SIZE = 3
 NUM_WORKERS = 4
 TEXT_DIM = 4096
 IMAGE_DIM = 2048
+MULTIMODAL_DIM = 6144
+DESIGNATION_DIM = 2048
+DESCRIPTION_DIM = 2048
 
 if __name__ == "__main__":
     import os
